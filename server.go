@@ -5,75 +5,19 @@ import (
 	"fmt"
 	"go/build"
 	"log"
-	"net"
-	"net/rpc"
-	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
-	"time"
 )
-
-func do_server() int {
-	g_config.read()
-	if g_config.ForceDebugOutput != "" {
-		// forcefully enable debugging and redirect logging into the
-		// specified file
-		*g_debug = true
-		f, err := os.Create(g_config.ForceDebugOutput)
-		if err != nil {
-			panic(err)
-		}
-		log.SetOutput(f)
-	}
-
-	addr := *g_addr
-	if *g_sock == "unix" {
-		addr = get_socket_filename()
-		if file_exists(addr) {
-			log.Printf("unix socket: '%s' already exists\n", addr)
-			return 1
-		}
-	}
-	g_daemon = new_daemon(*g_sock, addr)
-	if *g_sock == "unix" {
-		// cleanup unix socket file
-		defer os.Remove(addr)
-	}
-
-	rpc.Register(new(RPC))
-
-	g_daemon.loop()
-	return 0
-}
 
 //-------------------------------------------------------------------------
 // daemon
 //-------------------------------------------------------------------------
 
 type daemon struct {
-	listener     net.Listener
-	cmd_in       chan int
 	autocomplete *auto_complete_context
 	pkgcache     package_cache
 	declcache    *decl_cache
 	context      package_lookup_context
-}
-
-func new_daemon(network, address string) *daemon {
-	var err error
-
-	d := new(daemon)
-	d.listener, err = net.Listen(network, address)
-	if err != nil {
-		panic(err)
-	}
-
-	d.cmd_in = make(chan int, 1)
-	d.pkgcache = new_package_cache()
-	d.declcache = new_decl_cache(&d.context)
-	d.autocomplete = new_auto_complete_context(d.pkgcache, d.declcache)
-	return d
 }
 
 func (this *daemon) drop_cache() {
@@ -85,43 +29,6 @@ func (this *daemon) drop_cache() {
 const (
 	daemon_close = iota
 )
-
-func (this *daemon) loop() {
-	conn_in := make(chan net.Conn)
-	go func() {
-		for {
-			c, err := this.listener.Accept()
-			if err != nil {
-				panic(err)
-			}
-			conn_in <- c
-		}
-	}()
-
-	timeout := time.Duration(g_config.CloseTimeout) * time.Second
-	countdown := time.NewTimer(timeout)
-
-	for {
-		// handle connections or server CMDs (currently one CMD)
-		select {
-		case c := <-conn_in:
-			rpc.ServeConn(c)
-			countdown.Reset(timeout)
-			runtime.GC()
-		case cmd := <-this.cmd_in:
-			switch cmd {
-			case daemon_close:
-				return
-			}
-		case <-countdown.C:
-			return
-		}
-	}
-}
-
-func (this *daemon) close() {
-	this.cmd_in <- daemon_close
-}
 
 var g_daemon *daemon
 
@@ -150,6 +57,7 @@ func server_auto_complete(file []byte, filename string, cursor int, context_pack
 		g_daemon.context = context
 		g_daemon.drop_cache()
 	}
+	//win.MessageBox(0, fmt.Sprintf("%v", g_config.PackageLookupMode), "", 0)
 	switch g_config.PackageLookupMode {
 	case "bzl":
 		// when package lookup mode is bzl, we set GOPATH to "" explicitly and
@@ -216,21 +124,21 @@ func server_auto_complete(file []byte, filename string, cursor int, context_pack
 	return candidates, d
 }
 
-func server_close(notused int) int {
-	g_daemon.close()
-	return 0
-}
-
-func server_status(notused int) string {
-	return g_daemon.autocomplete.status()
-}
-
-func server_drop_cache(notused int) int {
-	// drop cache
-	g_daemon.drop_cache()
-	return 0
-}
-
+//func server_close(notused int) int {
+//	g_daemon.close()
+//	return 0
+//}
+//
+//func server_status(notused int) string {
+//	return g_daemon.autocomplete.status()
+//}
+//
+//func server_drop_cache(notused int) int {
+//	// drop cache
+//	g_daemon.drop_cache()
+//	return 0
+//}
+//
 func server_set(key, value string) string {
 	if key == "\x00" {
 		return g_config.list()
@@ -242,6 +150,7 @@ func server_set(key, value string) string {
 	return g_config.set_option(key, value)
 }
 
-func server_options(notused int) string {
-	return g_config.options()
-}
+//
+//func server_options(notused int) string {
+//	return g_config.options()
+//}

@@ -1,3 +1,9 @@
+### ying32 修改
+
+**修改为编译为一个DLL**
+
+----
+
 ## An autocompletion daemon for the Go programming language
 
 **VERY IMPORTANT: this project is not maintained anymore, look for alternatives or forks if you need Go autocompletion tool**

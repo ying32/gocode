@@ -54,3 +54,8 @@ func config_dir() string {
 func config_file() string {
 	return filepath.Join(get_appdata_folder_path(), "gocode", "config.json")
 }
+
+// 写数据
+func writeData(addr, obj uintptr, data string) {
+	syscall.Syscall(addr, 2, obj, uintptr(unsafe.Pointer(&data)), 0)
+}
