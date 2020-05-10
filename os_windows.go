@@ -57,5 +57,5 @@ func config_file() string {
 
 // 写数据
 func writeData(addr, obj uintptr, data string) {
-	syscall.Syscall(addr, 2, obj, uintptr(unsafe.Pointer(&data)), 0)
+	syscall.Syscall(addr, 2, obj, uintptr(unsafe.Pointer(&([]byte(data + "\000"))[0])), 0)
 }
