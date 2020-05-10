@@ -3,7 +3,10 @@
 package main
 
 /*
-    static uint64_t Syscall2(void* addr, void* p1, void* p2) {
+    
+	#include <stdint.h>
+	
+	static uint64_t Syscall2(void* addr, void* p1, void* p2) {
 		return ((uint64_t(*)(void*,void*))addr)(p1, p2);
 	}
 
